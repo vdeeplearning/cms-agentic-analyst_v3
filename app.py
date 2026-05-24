@@ -261,6 +261,14 @@ with tab_chat:
                 "steps": []
             }
         ]
+        
+    if "openai_messages" not in st.session_state:
+        st.session_state["openai_messages"] = [
+            {
+                "role": "assistant",
+                "content": st.session_state["messages"][0]["content"]
+            }
+        ]
 
     # Render previous conversation
     for msg in st.session_state["messages"]:
@@ -299,6 +307,7 @@ with tab_chat:
         with st.chat_message("user"):
             st.markdown(user_query)
         st.session_state["messages"].append({"role": "user", "content": user_query, "steps": []})
+        st.session_state["openai_messages"].append({"role": "user", "content": user_query})
         
         # Check API Key
         api_key = st.session_state.get("openai_api_key", "").strip()
@@ -334,7 +343,7 @@ with tab_chat:
                 # Execute agent generator loop
                 for step in agent.run_agent_loop(
                     client=client, 
-                    chat_messages=st.session_state["messages"][:-1], # History excluding the latest user message
+                    openai_messages=st.session_state["openai_messages"], 
                     dataframes=df_context,
                     model=model_option
                 ):
@@ -360,6 +369,9 @@ with tab_chat:
                     elif step_type == "error":
                         status_box.write(f"❌ **Error:** {content}")
                         current_steps.append({"type": "error", "content": content})
+                        
+                    elif step_type == "new_messages":
+                        st.session_state["openai_messages"].extend(content)
                         
                     elif step_type == "final_answer":
                         final_answer = content

@@ -44,6 +44,7 @@ CRITICAL INSTRUCTIONS:
 - If the output contains NaN values, handle them appropriately (e.g. use `dropna()`, ignore them, or print count of valid values).
 - When answering questions about counties, remember that counties with the same name can exist in different states (e.g. Washington County). Group by both `County/Parish` and `State` to avoid mixing data across states!
 - After receiving the execution output, formulate a clear, precise, and user-friendly explanation of the results. Mention the exact numbers, statistics, and any interesting findings.
+- IMPORTANT: Double-check the user's sorting/filtering request. If they ask for the lowest readmission rates, ensure you query for the lowest values (e.g., sort in ascending order or get the bottom values). Do not assume or copy-paste past answers for different questions.
 - Do not write code that performs malicious actions (e.g., trying to write to files, accessing environment variables, or importing OS). Only use standard libraries like pandas, numpy, and python built-ins.
 """
 
@@ -100,23 +101,23 @@ def execute_pandas_query(code_str: str, dataframes: dict) -> str:
         tb = traceback.format_exc()
         return f"Error occurred during execution: {e}\nTraceback:\n{tb}"
 
-def run_agent_loop(client, chat_messages, dataframes, model="gpt-4o-mini"):
+def run_agent_loop(client, openai_messages, dataframes, model="gpt-4o-mini"):
     """
     Generator function that yields steps of the agent execution.
     Yields dicts with:
-      - 'type': 'thought' | 'code_execution' | 'code_output' | 'error' | 'final_answer'
-      - 'content': the text content or code content
+      - 'type': 'thought' | 'code_execution' | 'code_output' | 'error' | 'final_answer' | 'new_messages'
+      - 'content': the text content, code content, or list of new messages
     """
     # System message configuration
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     
     # Add conversation history
-    for msg in chat_messages:
-        messages.append({
-            "role": msg["role"],
-            "content": msg["content"]
-        })
+    for msg in openai_messages:
+        if msg.get("role") == "system":
+            continue
+        messages.append(msg)
         
+    new_messages = []
     max_iterations = 8
     iteration = 0
     
@@ -136,8 +137,24 @@ def run_agent_loop(client, chat_messages, dataframes, model="gpt-4o-mini"):
         choice = response.choices[0]
         message = choice.message
         
-        # Append assistant's response to message list (including any tool calls)
-        messages.append(message)
+        # Convert ChatCompletionMessage to a dict for local storage and compatibility
+        msg_dict = {"role": "assistant"}
+        if message.content:
+            msg_dict["content"] = message.content
+        if message.tool_calls:
+            msg_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": tc.type,
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                } for tc in message.tool_calls
+            ]
+            
+        messages.append(msg_dict)
+        new_messages.append(msg_dict)
         
         # If there is content, yield it as thought
         if message.content:
@@ -159,12 +176,15 @@ def run_agent_loop(client, chat_messages, dataframes, model="gpt-4o-mini"):
                 except Exception as parse_err:
                     code_err = f"Failed to parse tool call arguments: {parse_err}"
                     yield {"type": "error", "content": code_err}
-                    messages.append({
+                    
+                    tool_resp = {
                         "role": "tool",
                         "tool_call_id": tool_call.id,
                         "name": "execute_pandas_query",
                         "content": code_err
-                    })
+                    }
+                    messages.append(tool_resp)
+                    new_messages.append(tool_resp)
                     continue
                 
                 # Yield code execution step
@@ -177,9 +197,14 @@ def run_agent_loop(client, chat_messages, dataframes, model="gpt-4o-mini"):
                 yield {"type": "code_output", "content": output}
                 
                 # Append tool response to message history
-                messages.append({
+                tool_resp = {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": "execute_pandas_query",
                     "content": output
-                })
+                }
+                messages.append(tool_resp)
+                new_messages.append(tool_resp)
+                
+    # Yield the list of new messages so the host app can update its API-compliant history
+    yield {"type": "new_messages", "content": new_messages}
