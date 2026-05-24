@@ -5,6 +5,14 @@ A web-based AI Data Analyst dashboard built in Python using Streamlit and OpenAI
 ### Deployed Web Application
 🔗 **Render URL:** [https://cms-agentic-analyst.onrender.com](https://cms-agentic-analyst.onrender.com) (or [https://cms-agentic-analyst-v3.onrender.com](https://cms-agentic-analyst-v3.onrender.com))
 
+### Screenshots
+
+#### 🤖 AI Data Agent & Chat Interface
+![AI Data Agent Chat](assets/agent_chat_screenshot.png)
+
+#### 📊 Key Insights & Visualizations Dashboard
+![Insights Dashboard](assets/insights_dashboard_screenshot.png)
+
 ---
 
 ## What the Agent is Doing (Step-by-Step Workflow)
