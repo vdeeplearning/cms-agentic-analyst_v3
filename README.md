@@ -5,13 +5,18 @@ A web-based AI Data Analyst dashboard built in Python using Streamlit and OpenAI
 ### Deployed Web Application
 🔗 **Render URL:** [https://cms-agentic-analyst.onrender.com](https://cms-agentic-analyst.onrender.com) (or [https://cms-agentic-analyst-v3.onrender.com](https://cms-agentic-analyst-v3.onrender.com))
 
-### Screenshots
+### Screenshots and Visualisations
 
 #### 🤖 AI Data Agent & Chat Interface
 ![AI Data Agent Chat](assets/agent_chat_screenshot.png)
 
 #### 📊 Key Insights & Visualizations Dashboard
 ![Insights Dashboard](assets/insights_dashboard_screenshot.png)
+
+#### 📈 Hospital Rating vs. Excess Readmission Ratio Plot
+![Hospital Rating vs Excess Readmission Ratio](assets/readmission_vs_rating.png)
+
+*   **Plot Interpretation**: This scatter plot shows the relation between a hospital's quality star rating (x-axis, jittered to prevent overlapping dots) and its excess readmission ratio (y-axis). A ratio above the green dashed line of `1.0` (neutral baseline) represents higher-than-expected readmissions, which incurs Medicare penalties under the HRRP. The blue line tracks the mean ratio across star categories. As hospital ratings rise from 1 to 5 stars, the average excess readmission ratio steadily drops (from ~1.05 to ~0.97), and the distribution of hospitals narrows significantly. This suggests that higher-quality hospitals are much more successful at keeping readmissions below expected rates.
 
 ---
 
