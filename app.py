@@ -26,7 +26,7 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Typography overrides */
-html, body, [class*="css"], .stText, p, li, span, label {
+html, body, .stApp, .stMarkdown, .stText, p, li, span, label, button, input, select, textarea {
     font-family: 'Inter', sans-serif !important;
 }
 
@@ -290,6 +290,9 @@ with tab_chat:
             
             # Display final message text
             st.markdown(msg["content"])
+
+    # Add a spacer at the bottom of the conversation to prevent overlap with the fixed chat input widget
+    st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
 
     # Check for pre-baked clicks
     user_query = ""
