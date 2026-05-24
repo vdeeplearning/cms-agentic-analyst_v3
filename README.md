@@ -3,7 +3,7 @@
 A web-based AI Data Analyst dashboard built in Python using Streamlit and OpenAI. The application automatically downloads and merges Centers for Medicare & Medicaid Services (CMS) hospital data, cleans the datasets, and uses an AI agent to answer complex statistical questions by writing and executing Python/Pandas code in real-time.
 
 ### Deployed Web Application
-🔗 **Render URL:** [https://cms-agentic-analyst.onrender.com](https://cms-agentic-analyst.onrender.com) (or [https://cms-agentic-analyst-v3.onrender.com](https://cms-agentic-analyst-v3.onrender.com))
+🔗 **Render URL:** [https://cms-agentic-analyst.onrender.com](https://cms-agentic-analyst.onrender.com)
 
 ### Screenshots and Visualisations
 
