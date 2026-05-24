@@ -4,6 +4,7 @@ import json
 import traceback
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 # System prompt explaining the context and the available DataFrames
 SYSTEM_PROMPT = """You are an expert healthcare data analyst AI agent.
@@ -44,6 +45,16 @@ CRITICAL INSTRUCTIONS:
 - If the output contains NaN values, handle them appropriately (e.g. use `dropna()`, ignore them, or print count of valid values).
 - When answering questions about counties, remember that counties with the same name can exist in different states (e.g. Washington County). Group by both `County/Parish` and `State` to avoid mixing data across states!
 - After receiving the execution output, formulate a clear, precise, and user-friendly explanation of the results. Mention the exact numbers, statistics, and any interesting findings.
+- **DIRECT PLOTTING / CHARTS**: You can plot charts directly in the Streamlit UI! If the user asks for a chart, visualization, or plot, write Python code that uses Streamlit's native visualization methods like:
+  - `st.bar_chart(df)` or `st.line_chart(df)`
+  - Matplotlib plots (make sure to call `st.pyplot(fig)`):
+    ```python
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(10, 5))
+    # ... plot details ...
+    st.pyplot(fig)
+    ```
+- **DATASET TIME LIMITATION**: The CMS HRRP dataset represents a static, aggregated 3-year cohort window (Start Date: `07/01/2021`, End Date: `06/30/2024`) for each hospital/measure. It does **not** contain monthly or annual historical trend intervals. If the user asks for historical trends over months/years, check the unique dates first, explain this limitation, and offer to plot a cross-sectional chart (e.g., readmissions by measure, ownership, or state) instead!
 - IMPORTANT: Double-check the user's sorting/filtering request. If they ask for the lowest readmission rates, ensure you query for the lowest values (e.g., sort in ascending order or get the bottom values). Do not assume or copy-paste past answers for different questions.
 - IMPORTANT: Every question in the conversation is independent. Do NOT repeat or copy the Python code, queries, or answers from previous turns unless explicitly requested by the user. Always write a fresh Pandas query that specifically targets the columns and constraints requested in the current question.
 - Do not write code that performs malicious actions (e.g., trying to write to files, accessing environment variables, or importing OS). Only use standard libraries like pandas, numpy, and python built-ins.
@@ -79,6 +90,7 @@ def execute_pandas_query(code_str: str, dataframes: dict) -> str:
     local_vars = {
         'pd': pd,
         'np': np,
+        'st': st,
         **dataframes
     }
     
