@@ -45,6 +45,7 @@ CRITICAL INSTRUCTIONS:
 - When answering questions about counties, remember that counties with the same name can exist in different states (e.g. Washington County). Group by both `County/Parish` and `State` to avoid mixing data across states!
 - After receiving the execution output, formulate a clear, precise, and user-friendly explanation of the results. Mention the exact numbers, statistics, and any interesting findings.
 - IMPORTANT: Double-check the user's sorting/filtering request. If they ask for the lowest readmission rates, ensure you query for the lowest values (e.g., sort in ascending order or get the bottom values). Do not assume or copy-paste past answers for different questions.
+- IMPORTANT: Every question in the conversation is independent. Do NOT repeat or copy the Python code, queries, or answers from previous turns unless explicitly requested by the user. Always write a fresh Pandas query that specifically targets the columns and constraints requested in the current question.
 - Do not write code that performs malicious actions (e.g., trying to write to files, accessing environment variables, or importing OS). Only use standard libraries like pandas, numpy, and python built-ins.
 """
 
@@ -138,9 +139,10 @@ def run_agent_loop(client, openai_messages, dataframes, model="gpt-4o-mini"):
         message = choice.message
         
         # Convert ChatCompletionMessage to a dict for local storage and compatibility
-        msg_dict = {"role": "assistant"}
-        if message.content:
-            msg_dict["content"] = message.content
+        msg_dict = {
+            "role": "assistant",
+            "content": message.content
+        }
         if message.tool_calls:
             msg_dict["tool_calls"] = [
                 {
