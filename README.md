@@ -75,11 +75,15 @@ The application programmatically downloads, caches, cleans, and merges two disti
 ### 2. Hospital General Information Dataset
 *   **What it is**: Administrative directory and overall performance metadata for all Medicare-certified hospitals in the United States.
 *   **Dataset Size**: **5,432 hospitals** (rows) and **38 columns**.
-*   **Data Included (Beyond Readmissions)**:
+*   **Data Included**:
     *   **Geographic Metadata**: Street Address, City, State, ZIP Code, and **County/Parish**.
     *   **Administrative Classification**: Hospital Type (e.g., *Acute Care*, *Critical Access*) and Hospital Ownership (e.g., *Proprietary*, *Voluntary non-profit*, *Government*).
-    *   **Emergency Services**: Indicating whether the hospital offers emergency services (`Yes`/`No`).
+    *   **Emergency & Maternal Services**: Primary telephone number, emergency services availability (`Yes`/`No`), and the "Birthing-Friendly" designation indicator (`Yes`/`No`).
     *   **Performance Star Ratings**: The overall rating (1 to 5 stars) summarizing mortality, safety, readmission, patient experience, and timely/effective care metrics.
+    *   **Mortality (MORT) performance counts**: Total eligible measures, reported measures, and the counts of measures scoring statistically better than, no different from, or worse than the national average.
+    *   **Safety of Care performance counts**: Total eligible measures, reported measures, and the counts of safety measures scoring better than, no different from, or worse than average.
+    *   **General Readmissions (READM) performance counts**: General readmissions group measures count and comparison performance counts (outside the specific HRRP program).
+    *   **Patient Experience (Pt Exp) & Timely Care (TE)**: Counts of eligible and reported metrics detailing HCAHPS satisfaction ratings and timelines/process-of-care effectiveness.
 
 ### 3. Combined Merged Dataset
 *   The application merges the HRRP readmissions dataset with all columns from the Hospital General Information dataset (joined on `Facility ID`).
