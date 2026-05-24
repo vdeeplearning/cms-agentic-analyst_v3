@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/Hospital_Readmissions_Reduction_Program.csv
+data/Hospital_General_Information.csv
+data/merged_cms_data.csv
+.streamlit/
