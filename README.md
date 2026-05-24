@@ -82,8 +82,8 @@ The application programmatically downloads, caches, cleans, and merges two disti
     *   **Performance Star Ratings**: The overall rating (1 to 5 stars) summarizing mortality, safety, readmission, patient experience, and timely/effective care metrics.
 
 ### 3. Combined Merged Dataset
-*   The application merges the HRRP readmissions dataset with selective columns from the Hospital General Information dataset (e.g., County/Parish, Hospital Type, Hospital Ownership, Emergency Services, and Star Rating).
-*   This results in a final merged dataset of **18,330 rows and 20 columns** pre-loaded in memory for the agent to query, enabling complex statistical correlations between readmission rates, ownership models, state/county geography, and overall ratings.
+*   The application merges the HRRP readmissions dataset with all columns from the Hospital General Information dataset (joined on `Facility ID`).
+*   This results in a final merged dataset of **18,330 rows and 47 columns** pre-loaded in memory for the agent to query, enabling complex statistical correlations between readmission rates, hospital ratings, ownership types, geography, and group quality metrics (mortality, safety, patient experience, timely care).
 
 ---
 
@@ -92,30 +92,57 @@ The application programmatically downloads, caches, cleans, and merges two disti
 The AI Data Agent queries the pre-loaded pandas DataFrames using the following unified schema.
 
 ### 1. The Merged Dataset (`merged_df`)
-This DataFrame is the primary dataset containing the full joint readmission statistics and administrative metadata. It contains **20 fields**:
+This DataFrame is the primary dataset containing the full joint readmission statistics and administrative metadata. It contains **47 fields**:
 
-| # | Field Name | Data Type | Source Dataset | Description / Explanation |
-|---|------------|-----------|----------------|---------------------------|
-| 1 | `Facility Name` | String | HRRP | The official name of the hospital. |
-| 2 | `Facility ID` | String | HRRP | The unique 6-character provider identifier, padded with leading zeros (e.g., `010001`). Used as the join key. |
-| 3 | `State` | String | HRRP | The US state abbreviation where the hospital is located. |
-| 4 | `Measure Name` | String | HRRP | The specific readmission condition being monitored. The six conditions are: <br>• `READM-30-AMI-HRRP` (Heart Attack)<br>• `READM-30-CABG-HRRP` (Heart Bypass Surgery)<br>• `READM-30-COPD-HRRP` (Pulmonary Disease)<br>• `READM-30-HF-HRRP` (Heart Failure)<br>• `READM-30-HIP-KNEE-HRRP` (Hip/Knee Joint Replacement)<br>• `READM-30-PN-HRRP` (Pneumonia) |
-| 5 | `Number of Discharges` | Numeric | HRRP | The cohort size, representing the count of eligible discharges for that measure during the 3-year cohort. Can be `NaN` if too few cases to report. |
-| 6 | `Footnote` | String | HRRP | Text codes indicating why data might be missing, excluded, or adjusted for that specific hospital/measure. |
-| 7 | `Excess Readmission Ratio` | Numeric | HRRP | The standard penalty metric: the ratio of the hospital's predicted readmissions to its expected readmissions. Ratios **greater than 1.0** indicate higher readmissions than expected and incur Medicare penalties. |
-| 8 | `Predicted Readmission Rate` | Numeric | HRRP | The risk-standardized rate percentage of unplanned readmissions within 30 days of discharge. |
-| 9 | `Expected Readmission Rate` | Numeric | HRRP | The rate percentage of readmissions expected if the hospital's patient mix (age, comorbidities, sex) were treated at an average US hospital. |
-| 10 | `Number of Readmissions` | Numeric | HRRP | The count of actual unplanned readmissions that occurred within 30 days of discharge. Can be `NaN` if count is too low to report. |
-| 11 | `Start Date` | String | HRRP | Cohort monitoring start date (`07/01/2021` for the current PY 2026 data release). |
-| 12 | `End Date` | String | HRRP | Cohort monitoring end date (`06/30/2024` for the current PY 2026 data release). |
-| 13 | `Address` | String | General Info | The physical street address of the hospital. |
-| 14 | `City/Town` | String | General Info | The city or town of the hospital. |
-| 15 | `ZIP Code` | String | General Info | The 5-digit ZIP code. |
-| 16 | `County/Parish` | String | General Info | The county or parish name. **Note:** Group by both `County/Parish` and `State` to avoid merging counties with identical names in different states. |
-| 17 | `Hospital Type` | String | General Info | Classification of the hospital (e.g., `Acute Care Hospitals`, `Critical Access Hospitals`, `Children's`). |
-| 18 | `Hospital Ownership` | String | General Info | The ownership model (e.g., `Proprietary` (for-profit), `Voluntary non-profit`, `Government - Hospital District or Authority`). |
-| 19 | `Emergency Services` | String | General Info | Flag indicating whether the hospital provides 24/7 emergency services (`Yes` or `No`). |
-| 20 | `Hospital overall rating` | Numeric | General Info | The overall quality score of the hospital (from 1 to 5 stars), summarizing metrics across safety, mortality, readmissions, and patient experience. |
+| # | Field Name | Data Type | Source Dataset | Category | Description / Explanation |
+|---|------------|-----------|----------------|----------|---------------------------|
+| 1 | `Facility Name` | String | HRRP | Demographics | The official name of the hospital. |
+| 2 | `Facility ID` | String | HRRP / Gen Info | Demographics | The unique 6-character provider identifier, padded with leading zeros (e.g., `010001`). Used as the join key. |
+| 3 | `State` | String | HRRP | Demographics | The US state abbreviation where the hospital is located. |
+| 4 | `Measure Name` | String | HRRP | Readmission (HRRP) | The specific readmission condition being monitored: <br>• `READM-30-AMI-HRRP` (Heart Attack)<br>• `READM-30-CABG-HRRP` (Heart Bypass Surgery)<br>• `READM-30-COPD-HRRP` (Pulmonary Disease)<br>• `READM-30-HF-HRRP` (Heart Failure)<br>• `READM-30-HIP-KNEE-HRRP` (Hip/Knee Joint Replacement)<br>• `READM-30-PN-HRRP` (Pneumonia) |
+| 5 | `Number of Discharges` | Numeric | HRRP | Readmission (HRRP) | The cohort size, representing the count of eligible discharges for that measure during the 3-year cohort. Can be `NaN` if too few cases to report. |
+| 6 | `Footnote` | String | HRRP | Readmission (HRRP) | Footnote explaining why data might be missing or adjusted for the measure. |
+| 7 | `Excess Readmission Ratio` | Numeric | HRRP | Readmission (HRRP) | Standard penalty metric: the ratio of the hospital's predicted readmissions to expected readmissions. Ratios **greater than 1.0** indicate higher readmissions than expected and incur Medicare penalties. |
+| 8 | `Predicted Readmission Rate` | Numeric | HRRP | Readmission (HRRP) | The risk-standardized rate percentage of unplanned readmissions within 30 days of discharge. |
+| 9 | `Expected Readmission Rate` | Numeric | HRRP | Readmission (HRRP) | The rate percentage of readmissions expected if the hospital's patient mix was treated at an average US hospital. |
+| 10 | `Number of Readmissions` | Numeric | HRRP | Readmission (HRRP) | The count of actual unplanned readmissions that occurred within 30 days of discharge. Can be `NaN` if count is too low to report. |
+| 11 | `Start Date` | String | HRRP | Readmission (HRRP) | Cohort monitoring start date (`07/01/2021` for the PY 2026 data release). |
+| 12 | `End Date` | String | HRRP | Readmission (HRRP) | Cohort monitoring end date (`06/30/2024` for the PY 2026 data release). |
+| 13 | `Address` | String | Gen Info | Demographics | The physical street address of the hospital. |
+| 14 | `City/Town` | String | Gen Info | Demographics | The city or town of the hospital. |
+| 15 | `ZIP Code` | String | Gen Info | Demographics | The 5-digit ZIP code. |
+| 16 | `County/Parish` | String | Gen Info | Demographics | The county or parish name. **Note:** Group by both `County/Parish` and `State` to avoid merging counties with identical names in different states. |
+| 17 | `Telephone Number` | String | Gen Info | Demographics | The primary telephone contact number for the facility. |
+| 18 | `Hospital Type` | String | Gen Info | Demographics | Classification of the hospital (e.g., `Acute Care Hospitals`, `Critical Access Hospitals`, `Children's`). |
+| 19 | `Hospital Ownership` | String | Gen Info | Demographics | The ownership model (e.g., `Proprietary` (for-profit), `Voluntary non-profit`, `Government`). |
+| 20 | `Emergency Services` | String | Gen Info | Demographics | Flag indicating whether the hospital provides 24/7 emergency services (`Yes` or `No`). |
+| 21 | `Meets criteria for birthing friendly designation` | String | Gen Info | Demographics | Flag indicating whether the hospital meets the clinical criteria for maternal care designation (`Yes` or `No`). |
+| 22 | `Hospital overall rating` | Numeric | Gen Info | Demographics | The overall quality score of the hospital (from 1 to 5 stars), summarizing metrics across safety, mortality, readmissions, and patient experience. |
+| 23 | `Hospital overall rating footnote` | String | Gen Info | Demographics | Footnote code explaining missing or adjusted star rating. |
+| 24 | `MORT Group Measure Count` | Numeric | Gen Info | Mortality (MORT) | Count of eligible individual mortality measures for the hospital. |
+| 25 | `Count of Facility MORT Measures` | Numeric | Gen Info | Mortality (MORT) | Number of mortality measures that were successfully reported and scored. |
+| 26 | `Count of MORT Measures Better` | Numeric | Gen Info | Mortality (MORT) | Number of mortality measures where performance was statistically better than the national average. |
+| 27 | `Count of MORT Measures No Different` | Numeric | Gen Info | Mortality (MORT) | Number of mortality measures where performance was statistically average. |
+| 28 | `Count of MORT Measures Worse` | Numeric | Gen Info | Mortality (MORT) | Number of mortality measures where performance was statistically worse than the national average. |
+| 29 | `MORT Group Footnote` | String | Gen Info | Mortality (MORT) | Footnote explaining missing or adjusted mortality group data. |
+| 30 | `Safety Group Measure Count` | Numeric | Gen Info | Safety of Care | Count of eligible individual safety of care measures for the hospital. |
+| 31 | `Count of Facility Safety Measures` | Numeric | Gen Info | Safety of Care | Number of safety measures that were successfully reported and scored. |
+| 32 | `Count of Safety Measures Better` | Numeric | Gen Info | Safety of Care | Number of safety measures performing statistically better than average (e.g., lower infection rates). |
+| 33 | `Count of Safety Measures No Different` | Numeric | Gen Info | Safety of Care | Number of safety measures performing statistically average. |
+| 34 | `Count of Safety Measures Worse` | Numeric | Gen Info | Safety of Care | Number of safety measures performing statistically worse than average. |
+| 35 | `Safety Group Footnote` | String | Gen Info | Safety of Care | Footnote explaining missing or adjusted safety group data. |
+| 36 | `READM Group Measure Count` | Numeric | Gen Info | Readmissions (Gen) | Count of eligible general readmission measures for the hospital (outside HRRP program). |
+| 37 | `Count of Facility READM Measures` | Numeric | Gen Info | Readmissions (Gen) | Number of general readmission measures that were successfully reported and scored. |
+| 38 | `Count of READM Measures Better` | Numeric | Gen Info | Readmissions (Gen) | Number of general readmission measures performing statistically better than average. |
+| 39 | `Count of READM Measures No Different` | Numeric | Gen Info | Readmissions (Gen) | Number of general readmission measures performing statistically average. |
+| 40 | `Count of READM Measures Worse` | Numeric | Gen Info | Readmissions (Gen) | Number of general readmission measures performing statistically worse than average. |
+| 41 | `READM Group Footnote` | String | Gen Info | Readmissions (Gen) | Footnote explaining missing or adjusted readmission group data. |
+| 42 | `Pt Exp Group Measure Count` | Numeric | Gen Info | Patient Experience | Count of eligible patient experience (HCAHPS survey) measures for the hospital. |
+| 43 | `Count of Facility Pt Exp Measures` | Numeric | Gen Info | Patient Experience | Number of patient experience measures that were successfully reported. |
+| 44 | `Pt Exp Group Footnote` | String | Gen Info | Patient Experience | Footnote explaining missing or adjusted patient experience group data. |
+| 45 | `TE Group Measure Count` | Numeric | Gen Info | Timely Care | Count of eligible timely and effective care measures for the hospital. |
+| 46 | `Count of Facility TE Measures` | Numeric | Gen Info | Timely Care | Number of timely and effective care measures that were successfully reported. |
+| 47 | `TE Group Footnote` | String | Gen Info | Timely Care | Footnote explaining missing or adjusted timely and effective care group data. |
 
 ### 2. The Raw HRRP Dataset (`hrrp_df`)
 Contains the original 18,330 rows representing the 30-day readmissions data with the 12 fields (fields 1-12 in the table above).

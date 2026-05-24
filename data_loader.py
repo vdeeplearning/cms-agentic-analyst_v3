@@ -64,20 +64,8 @@ def preprocess_and_merge():
     print("Cleaning Hospital General Info dataset...")
     info_df['Facility ID'] = info_df['Facility ID'].astype(str).str.zfill(6)
     
-    # We'll merge specific columns from General Info:
-    # Facility ID, Address, City/Town, ZIP Code, County/Parish, Hospital Type, Hospital Ownership, Emergency Services, Hospital overall rating
-    info_cols = [
-        'Facility ID', 
-        'Address', 
-        'City/Town', 
-        'ZIP Code', 
-        'County/Parish', 
-        'Hospital Type', 
-        'Hospital Ownership', 
-        'Emergency Services', 
-        'Hospital overall rating'
-    ]
-    info_subset = info_df[[c for c in info_cols if c in info_df.columns]].copy()
+    # We'll merge all columns from General Info, except for Facility Name and State (which are primary in HRRP) to avoid suffix collisions
+    info_subset = info_df.drop(columns=['Facility Name', 'State'], errors='ignore').copy()
     
     # Clean rating to numeric
     if 'Hospital overall rating' in info_subset.columns:
@@ -101,9 +89,9 @@ def load_data(force_reload=False):
         return preprocess_and_merge()
     
     print("Loading datasets from local CSV cache...")
-    merged_df = pd.read_csv(MERGED_CACHE, dtype={'Facility ID': str})
-    hrrp_df = pd.read_csv(HRRP_CACHE, dtype={'Facility ID': str})
-    info_df = pd.read_csv(INFO_CACHE, dtype={'Facility ID': str})
+    merged_df = pd.read_csv(MERGED_CACHE, dtype={'Facility ID': str}, low_memory=False)
+    hrrp_df = pd.read_csv(HRRP_CACHE, dtype={'Facility ID': str}, low_memory=False)
+    info_df = pd.read_csv(INFO_CACHE, dtype={'Facility ID': str}, low_memory=False)
     
     # Ensure numeric columns are properly parsed in merged_df
     numeric_cols = [

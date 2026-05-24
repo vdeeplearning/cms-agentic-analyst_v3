@@ -47,6 +47,12 @@ Here are the key columns and descriptions in `merged_df`:
 - 'Hospital Ownership': ownership model, e.g., 'Proprietary', 'Voluntary non-profit', 'Government - Hospital District or Authority' (string, from General Info).
 - 'Emergency Services': 'Yes' or 'No' (string, from General Info).
 - 'Hospital overall rating': 1 to 5 stars (float, can be NaN, from General Info).
+- Additional Quality Group fields in `merged_df`:
+  - Demographic directory fields: 'Address', 'City/Town', 'ZIP Code', 'Telephone Number', and 'Meets criteria for birthing friendly designation'.
+  - Mortality Group: 'MORT Group Measure Count', 'Count of Facility MORT Measures', 'Count of MORT Measures Better', 'Count of MORT Measures No Different', 'Count of MORT Measures Worse', and 'MORT Group Footnote'.
+  - Safety Group: 'Safety Group Measure Count', 'Count of Facility Safety Measures', 'Count of Safety Measures Better', 'Count of Safety Measures No Different', 'Count of Safety Measures Worse', and 'Safety Group Footnote'.
+  - General Readmissions Group: 'READM Group Measure Count', 'Count of Facility READM Measures', 'Count of READM Measures Better', 'Count of READM Measures No Different', 'Count of READM Measures Worse', and 'READM Group Footnote'.
+  - Patient Experience & Timely Care: 'Pt Exp Group Measure Count', 'Count of Facility Pt Exp Measures', 'Pt Exp Group Footnote', 'TE Group Measure Count', 'Count of Facility TE Measures', and 'TE Group Footnote'.
 
 CRITICAL INSTRUCTIONS:
 - You must answer the user's questions by writing Python code that queries these DataFrames.

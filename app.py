@@ -238,10 +238,11 @@ with col4:
 st.markdown("<div style='margin-bottom: 25px;'></div>", unsafe_allow_html=True)
 
 # ----------------- TABS SETUP -----------------
-tab_chat, tab_explorer, tab_viz = st.tabs([
+tab_chat, tab_explorer, tab_viz, tab_dict = st.tabs([
     "🤖 AI Data Agent", 
     "🔍 Interactive Data Explorer", 
-    "📊 Key Insights & Visualizations"
+    "📊 Key Insights & Visualizations",
+    "📋 Data Dictionary"
 ])
 
 # ----------------- TAB 1: AGENT CHAT -----------------
@@ -566,3 +567,93 @@ with tab_viz:
         ).properties(height=300)
         
         st.altair_chart(chart_states, use_container_width=True)
+
+# ----------------- TAB 4: DATA DICTIONARY -----------------
+with tab_dict:
+    st.markdown("### 📋 Interactive CMS Data Dictionary")
+    st.markdown("This tab displays all the available fields in the merged dataset (including demographics, clinical readmission metrics, and overall quality group counts).")
+    
+    # Define dictionary data
+    dict_list = [
+        {"Field Name": "Facility Name", "Source": "HRRP", "Data Type": "String", "Category": "Demographics", "Description": "The official name of the hospital."},
+        {"Field Name": "Facility ID", "Source": "HRRP", "Data Type": "String", "Category": "Demographics", "Description": "The unique 6-character provider identifier, padded with leading zeros (e.g., 010001)."},
+        {"Field Name": "State", "Source": "HRRP", "Data Type": "String", "Category": "Demographics", "Description": "The US state abbreviation where the hospital is located."},
+        {"Field Name": "Address", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "The physical street address of the hospital."},
+        {"Field Name": "City/Town", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "The city or town of the hospital."},
+        {"Field Name": "ZIP Code", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "The 5-digit ZIP code."},
+        {"Field Name": "County/Parish", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "The county or parish name."},
+        {"Field Name": "Telephone Number", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "The primary telephone contact number for the facility."},
+        {"Field Name": "Hospital Type", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "Classification of the hospital (e.g., Acute Care, Critical Access)."},
+        {"Field Name": "Hospital Ownership", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "The ownership model (e.g., Proprietary, Voluntary non-profit, Government)."},
+        {"Field Name": "Emergency Services", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "Flag indicating whether the hospital provides emergency services (Yes or No)."},
+        {"Field Name": "Meets criteria for birthing friendly designation", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "Flag indicating whether the hospital participates in maternal care collaboratives (Yes or No)."},
+        {"Field Name": "Hospital overall rating", "Source": "General Info", "Data Type": "Numeric", "Category": "Demographics", "Description": "The overall quality score of the hospital (from 1 to 5 stars)."},
+        {"Field Name": "Hospital overall rating footnote", "Source": "General Info", "Data Type": "String", "Category": "Demographics", "Description": "Footnote code explaining missing or adjusted star rating."},
+        
+        {"Field Name": "Measure Name", "Source": "HRRP", "Data Type": "String", "Category": "Readmission (HRRP)", "Description": "The specific readmission condition being monitored (AMI, CABG, COPD, HF, HIP-KNEE, PN)."},
+        {"Field Name": "Number of Discharges", "Source": "HRRP", "Data Type": "Numeric", "Category": "Readmission (HRRP)", "Description": "The count of eligible discharges for that measure during the 3-year cohort."},
+        {"Field Name": "Footnote", "Source": "HRRP", "Data Type": "String", "Category": "Readmission (HRRP)", "Description": "Footnote explaining why data might be missing or adjusted for the measure."},
+        {"Field Name": "Excess Readmission Ratio", "Source": "HRRP", "Data Type": "Numeric", "Category": "Readmission (HRRP)", "Description": "Standard penalty metric: predicted to expected readmissions. Values > 1.0 incur penalties."},
+        {"Field Name": "Predicted Readmission Rate", "Source": "HRRP", "Data Type": "Numeric", "Category": "Readmission (HRRP)", "Description": "Risk-standardized rate percentage of unplanned readmissions within 30 days."},
+        {"Field Name": "Expected Readmission Rate", "Source": "HRRP", "Data Type": "Numeric", "Category": "Readmission (HRRP)", "Description": "Expected rate percentage if patient mix was treated at an average US hospital."},
+        {"Field Name": "Number of Readmissions", "Source": "HRRP", "Data Type": "Numeric", "Category": "Readmission (HRRP)", "Description": "The count of actual unplanned readmissions within 30 days."},
+        {"Field Name": "Start Date", "Source": "HRRP", "Data Type": "String", "Category": "Readmission (HRRP)", "Description": "Cohort monitoring start date (e.g., 07/01/2021)."},
+        {"Field Name": "End Date", "Source": "HRRP", "Data Type": "String", "Category": "Readmission (HRRP)", "Description": "Cohort monitoring end date (e.g., 06/30/2024)."},
+        
+        {"Field Name": "MORT Group Measure Count", "Source": "General Info", "Data Type": "Numeric", "Category": "Mortality (MORT)", "Description": "Count of eligible individual mortality measures for the hospital."},
+        {"Field Name": "Count of Facility MORT Measures", "Source": "General Info", "Data Type": "Numeric", "Category": "Mortality (MORT)", "Description": "Number of mortality measures that were successfully reported and scored."},
+        {"Field Name": "Count of MORT Measures Better", "Source": "General Info", "Data Type": "Numeric", "Category": "Mortality (MORT)", "Description": "Number of mortality measures where performance was statistically better than the national average."},
+        {"Field Name": "Count of MORT Measures No Different", "Source": "General Info", "Data Type": "Numeric", "Category": "Mortality (MORT)", "Description": "Number of mortality measures where performance was statistically average."},
+        {"Field Name": "Count of MORT Measures Worse", "Source": "General Info", "Data Type": "Numeric", "Category": "Mortality (MORT)", "Description": "Number of mortality measures where performance was statistically worse than average."},
+        {"Field Name": "MORT Group Footnote", "Source": "General Info", "Data Type": "String", "Category": "Mortality (MORT)", "Description": "Footnote explaining missing or adjusted mortality group data."},
+        
+        {"Field Name": "Safety Group Measure Count", "Source": "General Info", "Data Type": "Numeric", "Category": "Safety of Care", "Description": "Count of eligible individual safety of care measures for the hospital."},
+        {"Field Name": "Count of Facility Safety Measures", "Source": "General Info", "Data Type": "Numeric", "Category": "Safety of Care", "Description": "Number of safety measures that were successfully reported and scored."},
+        {"Field Name": "Count of Safety Measures Better", "Source": "General Info", "Data Type": "Numeric", "Category": "Safety of Care", "Description": "Number of safety measures performing statistically better than average (e.g. lower infection rates)."},
+        {"Field Name": "Count of Safety Measures No Different", "Source": "General Info", "Data Type": "Numeric", "Category": "Safety of Care", "Description": "Number of safety measures performing statistically average."},
+        {"Field Name": "Count of Safety Measures Worse", "Source": "General Info", "Data Type": "Numeric", "Category": "Safety of Care", "Description": "Number of safety measures performing statistically worse than average."},
+        {"Field Name": "Safety Group Footnote", "Source": "General Info", "Data Type": "String", "Category": "Safety of Care", "Description": "Footnote explaining missing or adjusted safety group data."},
+        
+        {"Field Name": "READM Group Measure Count", "Source": "General Info", "Data Type": "Numeric", "Category": "Readmissions (General)", "Description": "Count of eligible general readmission measures for the hospital (outside HRRP program)."},
+        {"Field Name": "Count of Facility READM Measures", "Source": "General Info", "Data Type": "Numeric", "Category": "Readmissions (General)", "Description": "Number of general readmission measures that were successfully reported and scored."},
+        {"Field Name": "Count of READM Measures Better", "Source": "General Info", "Data Type": "Numeric", "Category": "Readmissions (General)", "Description": "Number of general readmission measures performing statistically better than average."},
+        {"Field Name": "Count of READM Measures No Different", "Source": "General Info", "Data Type": "Numeric", "Category": "Readmissions (General)", "Description": "Number of general readmission measures performing statistically average."},
+        {"Field Name": "Count of READM Measures Worse", "Source": "General Info", "Data Type": "Numeric", "Category": "Readmissions (General)", "Description": "Number of general readmission measures performing statistically worse than average."},
+        {"Field Name": "READM Group Footnote", "Source": "General Info", "Data Type": "String", "Category": "Readmissions (General)", "Description": "Footnote explaining missing or adjusted readmission group data."},
+        
+        {"Field Name": "Pt Exp Group Measure Count", "Source": "General Info", "Data Type": "Numeric", "Category": "Patient Experience", "Description": "Count of eligible patient experience (HCAHPS survey) measures for the hospital."},
+        {"Field Name": "Count of Facility Pt Exp Measures", "Source": "General Info", "Data Type": "Numeric", "Category": "Patient Experience", "Description": "Number of patient experience measures that were successfully reported."},
+        {"Field Name": "Pt Exp Group Footnote", "Source": "General Info", "Data Type": "String", "Category": "Patient Experience", "Description": "Footnote explaining missing or adjusted patient experience group data."},
+        
+        {"Field Name": "TE Group Measure Count", "Source": "General Info", "Data Type": "Numeric", "Category": "Timely & Effective Care", "Description": "Count of eligible timely and effective care measures for the hospital."},
+        {"Field Name": "Count of Facility TE Measures", "Source": "General Info", "Data Type": "Numeric", "Category": "Timely & Effective Care", "Description": "Number of timely and effective care measures that were successfully reported."},
+        {"Field Name": "TE Group Footnote", "Source": "General Info", "Data Type": "String", "Category": "Timely & Effective Care", "Description": "Footnote explaining missing or adjusted timely and effective care group data."}
+    ]
+    dict_df = pd.DataFrame(dict_list)
+    
+    # Filters in UI
+    search_query = st.text_input("🔍 Search Fields", "", placeholder="Type field name, category, source or keyword...")
+    category_filter = st.multiselect("Filter by Category", sorted(dict_df['Category'].unique()), default=[])
+    
+    # Filter logic
+    filtered_dict = dict_df.copy()
+    if search_query:
+        filtered_dict = filtered_dict[
+            filtered_dict['Field Name'].astype(str).str.contains(search_query, case=False) |
+            filtered_dict['Description'].astype(str).str.contains(search_query, case=False) |
+            filtered_dict['Category'].astype(str).str.contains(search_query, case=False)
+        ]
+    if category_filter:
+        filtered_dict = filtered_dict[filtered_dict['Category'].isin(category_filter)]
+        
+    st.markdown(f"Displaying **{filtered_dict.shape[0]}** columns:")
+    st.dataframe(filtered_dict, use_container_width=True, hide_index=True)
+    
+    # Styled Detail Explanations
+    st.markdown("### 📚 Field Detail Explanations")
+    for category, grp in dict_df.groupby("Category"):
+        with st.expander(f"{category} Fields ({grp.shape[0]} fields)"):
+            for idx, row in grp.iterrows():
+                st.markdown(f"**`{row['Field Name']}`** ({row['Data Type']}) — *Source: {row['Source']}*")
+                st.markdown(f" {row['Description']}")
+                st.markdown("---")
