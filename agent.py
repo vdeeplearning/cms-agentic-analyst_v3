@@ -3,9 +3,13 @@ import io
 import json
 import traceback
 import base64
+import threading
 import pandas as pd
 import numpy as np
 import streamlit as st
+
+# Global lock to make matplotlib plotting thread-safe for concurrent users
+EXECUTION_LOCK = threading.Lock()
 
 # Force Agg backend to prevent GUI thread issues in server environments
 import matplotlib
@@ -121,9 +125,10 @@ def execute_pandas_query(code_str: str, dataframes: dict) -> str:
     redirected_output = sys.stdout = io.StringIO()
     
     try:
-        # Compile and execute
-        compiled_code = compile(code_str, '<string>', 'exec')
-        exec(compiled_code, globals(), local_vars)
+        # Compile and execute within a thread-safe lock to prevent matplotlib concurrency issues in multi-user environments
+        with EXECUTION_LOCK:
+            compiled_code = compile(code_str, '<string>', 'exec')
+            exec(compiled_code, globals(), local_vars)
         sys.stdout = old_stdout
         output = redirected_output.getvalue()
         
