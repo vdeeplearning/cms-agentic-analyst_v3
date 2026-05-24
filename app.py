@@ -459,14 +459,9 @@ with tab_explorer:
     # Pagination/Rows count
     st.markdown(f"Showing **{filtered_df.shape[0]:,}** matching records:")
     
-    # Display table (only showing relevant columns to avoid clutter)
-    display_cols = [
-        'Facility ID', 'Facility Name', 'State', 'County/Parish', 
-        'Measure Name', 'Number of Discharges', 'Predicted Readmission Rate', 
-        'Expected Readmission Rate', 'Excess Readmission Ratio', 'Hospital overall rating', 'Hospital Ownership'
-    ]
+    # Display table with all available columns
     st.dataframe(
-        filtered_df[[c for c in display_cols if c in filtered_df.columns]],
+        filtered_df,
         use_container_width=True,
         hide_index=True
     )
