@@ -2,9 +2,15 @@ import sys
 import io
 import json
 import traceback
+import base64
 import pandas as pd
 import numpy as np
 import streamlit as st
+
+# Force Agg backend to prevent GUI thread issues in server environments
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # System prompt explaining the context and the available DataFrames
 SYSTEM_PROMPT = """You are an expert healthcare data analyst AI agent.
@@ -45,14 +51,15 @@ CRITICAL INSTRUCTIONS:
 - If the output contains NaN values, handle them appropriately (e.g. use `dropna()`, ignore them, or print count of valid values).
 - When answering questions about counties, remember that counties with the same name can exist in different states (e.g. Washington County). Group by both `County/Parish` and `State` to avoid mixing data across states!
 - After receiving the execution output, formulate a clear, precise, and user-friendly explanation of the results. Mention the exact numbers, statistics, and any interesting findings.
-- **DIRECT PLOTTING / CHARTS**: You can plot charts directly in the Streamlit UI! If the user asks for a chart, visualization, or plot, write Python code that uses Streamlit's native visualization methods like:
-  - `st.bar_chart(df)` or `st.line_chart(df)`
-  - Matplotlib plots (make sure to call `st.pyplot(fig)`):
+- **DIRECT PLOTTING / CHARTS (MATPLOTLIB)**: If the user asks for a chart, visualization, or plot, write standard matplotlib code to draw the chart and call `plt.show()`. The execution environment overrides `plt.show` to automatically capture the active figure, convert it to a base64-encoded PNG, and print it to stdout as a markdown image link (e.g. `![Agent Chart](data:image/png;base64,...)`).
+  - ALWAYS include the exact markdown image link (starting with `![Agent Chart](data:image/png;base64,...`) returned in the tool execution output inside your final response, exactly as-is. Streamlit will render the image inline.
+  - Example:
     ```python
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(10, 5))
     # ... plot details ...
-    st.pyplot(fig)
+    plt.title("Average Readmission Rates")
+    plt.show() # Automatically captures and prints the base64 markdown link
     ```
 - **DATASET TIME LIMITATION**: The CMS HRRP dataset represents a static, aggregated 3-year cohort window (Start Date: `07/01/2021`, End Date: `06/30/2024`) for each hospital/measure. It does **not** contain monthly or annual historical trend intervals. If the user asks for historical trends over months/years, check the unique dates first, explain this limitation, and offer to plot a cross-sectional chart (e.g., readmissions by measure, ownership, or state) instead!
 - IMPORTANT: Double-check the user's sorting/filtering request. If they ask for the lowest readmission rates, ensure you query for the lowest values (e.g., sort in ascending order or get the bottom values). Do not assume or copy-paste past answers for different questions.
@@ -86,10 +93,25 @@ def execute_pandas_query(code_str: str, dataframes: dict) -> str:
     Executes a string of python code in an environment containing the provided dataframes.
     Captures stdout and returns it. If an exception occurs, returns the exception details.
     """
+    # Custom show_plot function to capture matplotlib figure and print base64 image link
+    def show_plot():
+        fig = plt.gcf()
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
+        buf.seek(0)
+        img_str = base64.b64encode(buf.read()).decode('utf-8')
+        print(f"\n![Agent Chart](data:image/png;base64,{img_str})\n")
+        plt.close(fig)
+
+    # Bind custom show_plot to plt.show
+    plt.show = show_plot
+
     # Create execution namespace
     local_vars = {
         'pd': pd,
         'np': np,
+        'plt': plt,
+        'show_plot': show_plot,
         'st': st,
         **dataframes
     }
