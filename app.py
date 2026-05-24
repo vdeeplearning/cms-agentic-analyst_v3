@@ -289,7 +289,7 @@ with tab_chat:
                             st.error(f"Error: {step['content']}")
             
             # Display final message text
-            st.markdown(msg["content"])
+            st.markdown(msg["content"], unsafe_allow_html=True)
 
     # Add a spacer at the bottom of the conversation to prevent overlap with the fixed chat input widget
     st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
@@ -382,7 +382,7 @@ with tab_chat:
                 # Finish status container
                 if final_answer:
                     status_box.update(label="Execution Complete!", state="complete", expanded=False)
-                    final_answer_container.markdown(final_answer)
+                    final_answer_container.markdown(final_answer, unsafe_allow_html=True)
                     
                     # Store response in session state
                     st.session_state["messages"].append({
