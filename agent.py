@@ -56,7 +56,7 @@ CRITICAL INSTRUCTIONS:
 - When answering questions about counties, remember that counties with the same name can exist in different states (e.g. Washington County). Group by both `County/Parish` and `State` to avoid mixing data across states!
 - After receiving the execution output, formulate a clear, precise, and user-friendly explanation of the results. Mention the exact numbers, statistics, and any interesting findings.
 - **DIRECT PLOTTING / CHARTS (MATPLOTLIB)**: If the user asks for a chart, visualization, or plot, write standard matplotlib code to draw the chart and call `plt.show()`. The execution environment overrides `plt.show` to automatically capture the active figure, convert it to a base64-encoded PNG, and print it to stdout as an HTML image tag (e.g. `<img src="data:image/png;base64,..." width="100%"/>`).
-  - ALWAYS include the exact HTML image tag (starting with `<img src="data:image/png;base64,...`) returned in the tool execution output inside your final response, exactly as-is. Streamlit will render the image inline.
+  - Do NOT copy-paste the base64 code block or image tag into your response. The system will automatically detect the HTML image tag from your code output, extract it, and render the chart for the user. Simply write your natural language analysis.
   - Example:
     ```python
     import matplotlib.pyplot as plt
@@ -237,12 +237,21 @@ def run_agent_loop(client, openai_messages, dataframes, model="gpt-4o-mini"):
                 # Yield output step
                 yield {"type": "code_output", "content": output}
                 
+                # Preemptively strip large base64 image strings from the tool response sent to the LLM
+                # to prevent context window overload. The host app will extract and display the image.
+                import re
+                llm_output = re.sub(
+                    r'<img src="data:image/png;base64,[^"]+" width="100%"/>',
+                    '[Plot successfully rendered and displayed in the user interface]',
+                    output
+                )
+                
                 # Append tool response to message history
                 tool_resp = {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": "execute_pandas_query",
-                    "content": output
+                    "content": llm_output
                 }
                 messages.append(tool_resp)
                 new_messages.append(tool_resp)

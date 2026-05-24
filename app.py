@@ -334,6 +334,7 @@ with tab_chat:
                 
                 # We'll save steps to append to the message history
                 current_steps = []
+                extracted_plots = []
                 final_answer = ""
                 
                 # Preload context
@@ -369,6 +370,12 @@ with tab_chat:
                         status_box.text(content)
                         current_steps.append({"type": "code_output", "content": content})
                         
+                        # Extract any base64 HTML image tags printed to stdout
+                        import re
+                        imgs = re.findall(r'(<img src="data:image/png;base64,[^"]+"[^>]*>)', content)
+                        if imgs:
+                            extracted_plots.extend(imgs)
+                        
                     elif step_type == "error":
                         status_box.write(f"❌ **Error:** {content}")
                         current_steps.append({"type": "error", "content": content})
@@ -382,6 +389,11 @@ with tab_chat:
                 # Finish status container
                 if final_answer:
                     status_box.update(label="Execution Complete!", state="complete", expanded=False)
+                    
+                    # Append any extracted charts to the final markdown answer
+                    if extracted_plots:
+                        final_answer = final_answer + "\n\n" + "\n".join(extracted_plots)
+                        
                     final_answer_container.markdown(final_answer, unsafe_allow_html=True)
                     
                     # Store response in session state
