@@ -83,21 +83,42 @@ The application programmatically downloads, caches, cleans, and merges two disti
 ---
 
 ## Dataset Schema Reference (Available to the Agent)
-The agent queries the following datasets:
-*   `merged_df`: The merged CMS dataset joining readmission rates and hospital metadata.
-    *   `Facility ID`: Unique 6-character identifier.
-    *   `Facility Name`: Hospital name.
-    *   `State`: US state.
-    *   `County/Parish`: US county.
-    *   `Measure Name`: Target disease condition, e.g. Heart Attack (`READM-30-AMI-HRRP`), Heart Failure (`READM-30-HF-HRRP`), Pneumonia (`READM-30-PN-HRRP`).
-    *   `Number of Discharges`: Count of eligible patients discharged.
-    *   `Predicted Readmission Rate`: Predicted risk-standardized readmission percentage.
-    *   `Expected Readmission Rate`: Expected risk-standardized readmission percentage.
-    *   `Excess Readmission Ratio`: Metric used for penalties (Ratio > 1.0 indicates a higher rate of readmissions than expected).
-    *   `Hospital overall rating`: Star rating between 1 and 5.
-    *   `Hospital Ownership`: E.g., Proprietary, Voluntary non-profit, Government.
-*   `hrrp_df`: The raw Hospital Readmissions Reduction Program dataset.
-*   `info_df`: The raw Hospital General Information dataset.
+
+The AI Data Agent queries the pre-loaded pandas DataFrames using the following unified schema.
+
+### 1. The Merged Dataset (`merged_df`)
+This DataFrame is the primary dataset containing the full joint readmission statistics and administrative metadata. It contains **20 fields**:
+
+| # | Field Name | Data Type | Source Dataset | Description / Explanation |
+|---|------------|-----------|----------------|---------------------------|
+| 1 | `Facility Name` | String | HRRP | The official name of the hospital. |
+| 2 | `Facility ID` | String | HRRP | The unique 6-character provider identifier, padded with leading zeros (e.g., `010001`). Used as the join key. |
+| 3 | `State` | String | HRRP | The US state abbreviation where the hospital is located. |
+| 4 | `Measure Name` | String | HRRP | The specific readmission condition being monitored. The six conditions are: <br>• `READM-30-AMI-HRRP` (Heart Attack)<br>• `READM-30-CABG-HRRP` (Heart Bypass Surgery)<br>• `READM-30-COPD-HRRP` (Pulmonary Disease)<br>• `READM-30-HF-HRRP` (Heart Failure)<br>• `READM-30-HIP-KNEE-HRRP` (Hip/Knee Joint Replacement)<br>• `READM-30-PN-HRRP` (Pneumonia) |
+| 5 | `Number of Discharges` | Numeric | HRRP | The cohort size, representing the count of eligible discharges for that measure during the 3-year cohort. Can be `NaN` if too few cases to report. |
+| 6 | `Footnote` | String | HRRP | Text codes indicating why data might be missing, excluded, or adjusted for that specific hospital/measure. |
+| 7 | `Excess Readmission Ratio` | Numeric | HRRP | The standard penalty metric: the ratio of the hospital's predicted readmissions to its expected readmissions. Ratios **greater than 1.0** indicate higher readmissions than expected and incur Medicare penalties. |
+| 8 | `Predicted Readmission Rate` | Numeric | HRRP | The risk-standardized rate percentage of unplanned readmissions within 30 days of discharge. |
+| 9 | `Expected Readmission Rate` | Numeric | HRRP | The rate percentage of readmissions expected if the hospital's patient mix (age, comorbidities, sex) were treated at an average US hospital. |
+| 10 | `Number of Readmissions` | Numeric | HRRP | The count of actual unplanned readmissions that occurred within 30 days of discharge. Can be `NaN` if count is too low to report. |
+| 11 | `Start Date` | String | HRRP | Cohort monitoring start date (`07/01/2021` for the current PY 2026 data release). |
+| 12 | `End Date` | String | HRRP | Cohort monitoring end date (`06/30/2024` for the current PY 2026 data release). |
+| 13 | `Address` | String | General Info | The physical street address of the hospital. |
+| 14 | `City/Town` | String | General Info | The city or town of the hospital. |
+| 15 | `ZIP Code` | String | General Info | The 5-digit ZIP code. |
+| 16 | `County/Parish` | String | General Info | The county or parish name. **Note:** Group by both `County/Parish` and `State` to avoid merging counties with identical names in different states. |
+| 17 | `Hospital Type` | String | General Info | Classification of the hospital (e.g., `Acute Care Hospitals`, `Critical Access Hospitals`, `Children's`). |
+| 18 | `Hospital Ownership` | String | General Info | The ownership model (e.g., `Proprietary` (for-profit), `Voluntary non-profit`, `Government - Hospital District or Authority`). |
+| 19 | `Emergency Services` | String | General Info | Flag indicating whether the hospital provides 24/7 emergency services (`Yes` or `No`). |
+| 20 | `Hospital overall rating` | Numeric | General Info | The overall quality score of the hospital (from 1 to 5 stars), summarizing metrics across safety, mortality, readmissions, and patient experience. |
+
+### 2. The Raw HRRP Dataset (`hrrp_df`)
+Contains the original 18,330 rows representing the 30-day readmissions data with the 12 fields (fields 1-12 in the table above).
+
+### 3. The Raw General Information Dataset (`info_df`)
+Contains the original 5,432 rows representing all certified hospitals in the US with all 38 columns, including telephone numbers, rating footnotes, and detailed group measure counts (mortality, safety, patient experience, timely care).
+
+---
 
 ---
 
