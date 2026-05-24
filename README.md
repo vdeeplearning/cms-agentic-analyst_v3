@@ -43,6 +43,37 @@ The agent behaves like a human data analyst in a sandbox environment. Below are 
 
 ---
 
+## About the CMS Datasets
+
+The application programmatically downloads, caches, cleans, and merges two distinct public datasets from the Centers for Medicare & Medicaid Services (CMS) Provider Data Catalog:
+
+### 1. Hospital Readmissions Reduction Program (HRRP) Dataset
+*   **What it is**: Clinical performance metrics tracking **30-day risk-standardized unplanned readmission rates** for Medicare beneficiaries. The program penalizes hospitals with higher-than-expected readmissions.
+*   **Conditions Covered**: Tracks 6 specific conditions and procedures:
+    *   **AMI**: Acute Myocardial Infarction (Heart Attack)
+    *   **CABG**: Coronary Artery Bypass Graft (Heart Bypass Surgery)
+    *   **COPD**: Chronic Obstructive Pulmonary Disease
+    *   **HF**: Heart Failure
+    *   **THA/TKA (HIP-KNEE)**: Elective Primary Total Hip Arthroplasty and/or Total Knee Arthroplasty (Joint Replacement)
+    *   **PN**: Pneumonia
+*   **Dataset Size**: **18,330 records** (rows) and **12 columns**. Each hospital has a separate row for each of the 6 measures they are eligible for.
+*   **Key Fields**: `Facility ID`, `Number of Discharges`, `Predicted Readmission Rate`, `Expected Readmission Rate`, and `Excess Readmission Ratio` (where values > 1.0 indicate readmissions higher than expected and trigger penalties).
+
+### 2. Hospital General Information Dataset
+*   **What it is**: Administrative directory and overall performance metadata for all Medicare-certified hospitals in the United States.
+*   **Dataset Size**: **5,432 hospitals** (rows) and **38 columns**.
+*   **Data Included (Beyond Readmissions)**:
+    *   **Geographic Metadata**: Street Address, City, State, ZIP Code, and **County/Parish**.
+    *   **Administrative Classification**: Hospital Type (e.g., *Acute Care*, *Critical Access*) and Hospital Ownership (e.g., *Proprietary*, *Voluntary non-profit*, *Government*).
+    *   **Emergency Services**: Indicating whether the hospital offers emergency services (`Yes`/`No`).
+    *   **Performance Star Ratings**: The overall rating (1 to 5 stars) summarizing mortality, safety, readmission, patient experience, and timely/effective care metrics.
+
+### 3. Combined Merged Dataset
+*   The application merges the HRRP readmissions dataset with selective columns from the Hospital General Information dataset (e.g., County/Parish, Hospital Type, Hospital Ownership, Emergency Services, and Star Rating).
+*   This results in a final merged dataset of **18,330 rows and 20 columns** pre-loaded in memory for the agent to query, enabling complex statistical correlations between readmission rates, ownership models, state/county geography, and overall ratings.
+
+---
+
 ## Dataset Schema Reference (Available to the Agent)
 The agent queries the following datasets:
 *   `merged_df`: The merged CMS dataset joining readmission rates and hospital metadata.
