@@ -46,13 +46,32 @@ The agent behaves like a human data analyst in a sandbox environment. Below are 
 6. Final Response Formatting (LLM outputs markdown tables/charts & text)
 ```
 
-1. **System Context & Schema Loading**: Upon startup, the application downloads and cleans two datasets: the *Hospital Readmissions Reduction Program (HRRP)* data and the *Hospital General Information* data. It joins them into a single enriched DataFrame `merged_df` containing county, state, rating, ownership model, and readmission metrics.
+1. **System Context & Schema Loading**: Upon startup, the application downloads and cleans two datasets: the *Hospital Readmissions Reduction Program (HRRP)* data and the *Hospital General Information* data. It joins them into a single enriched DataFrame `merged_df` containing county, state, rating, ownership model, and readmission metrics. The agent also receives a live schema summary generated from the loaded pandas DataFrames, including exact DataFrame names, column names, data types, row/column counts, and known dataset limitations.
 2. **User Question Reception**: When you submit a question (e.g., *"Which 10 counties have the highest readmission rates?"*), the message is appended to the session history.
 3. **Agent Reasoning**: The agent (powered by OpenAI's `gpt-4o-mini` or `gpt-4o`) analyzes the question against the pre-loaded DataFrame columns and structures a Pandas query.
 4. **Tool Call Execution**: The agent triggers a custom tool named `execute_pandas_query` containing the Python script it wrote.
-5. **Local Sandboxed Execution**: The application intercepts the tool call, displays the code in the Streamlit UI, and executes the script locally on the server. The execution environment has isolated access to `merged_df`, `hrrp_df`, and `info_df`.
+5. **Pre-Execution Validation & Local Execution**: Before running generated code, the application validates it against safety and schema rules. The validator blocks OS/filesystem/network-style operations, disallows unsafe calls such as `eval()` or `open()`, prevents Streamlit UI calls inside tool code, and catches direct references to nonexistent DataFrame columns. If validation passes, the script executes locally on the server with access to `merged_df`, `hrrp_df`, and `info_df`.
 6. **Stdout Capture**: The execution captures standard output (stdout) and forwards it back to the agent.
 7. **Synthesis & Response**: The agent reads the results, formats them into a clean markdown explanation (often with sorted lists, tables, or averages), and presents the final answer to the user.
+
+---
+
+## Reliability Guardrails
+
+The project includes two reliability features designed to reduce hallucinations and unsafe or invalid generated analysis code:
+
+1. **Live schema-aware prompting**
+   * At runtime, the backend builds a compact schema summary from the loaded pandas DataFrames.
+   * The LLM receives exact DataFrame names, row/column counts, column names, and data types.
+   * The prompt also states dataset limitations, including that the HRRP data is hospital-level / hospital-measure-level aggregate data, not patient-level claims data, and that it contains one 3-year measurement window rather than monthly or annual trend rows.
+
+2. **Generated-code validation before execution**
+   * The `execute_pandas_query` tool validates LLM-generated Python code before it is executed.
+   * The validator blocks unsafe imports and calls such as OS access, filesystem writes, network libraries, `eval()`, `exec()`, `compile()`, and `open()`.
+   * The validator checks direct DataFrame column references against the live schema and returns a corrective error message to the LLM if a nonexistent column is used.
+   * This keeps the LLM useful for flexible analysis while making the deterministic Python backend responsible for enforcing basic safety and schema constraints.
+
+These guardrails do not make the prototype production-certified, but they make the demo more reliable and easier to explain: the LLM is schema-aware, tool execution is constrained, and invalid generated code is caught before it runs.
 
 ---
 

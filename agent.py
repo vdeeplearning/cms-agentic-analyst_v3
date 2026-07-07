@@ -4,6 +4,7 @@ import json
 import traceback
 import base64
 import threading
+import ast
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -77,6 +78,146 @@ CRITICAL INSTRUCTIONS:
 - Do not write code that performs malicious actions (e.g., trying to write to files, accessing environment variables, or importing OS). Only use standard libraries like pandas, numpy, and python built-ins.
 """
 
+BLOCKED_IMPORTS = {
+    "os",
+    "sys",
+    "subprocess",
+    "pathlib",
+    "shutil",
+    "socket",
+    "requests",
+    "urllib",
+    "http",
+    "ftplib",
+    "glob",
+    "pickle",
+    "importlib",
+}
+
+BLOCKED_CALLS = {
+    "eval",
+    "exec",
+    "compile",
+    "open",
+    "__import__",
+    "input",
+    "breakpoint",
+    "globals",
+    "locals",
+    "vars",
+}
+
+BLOCKED_METHODS = {
+    "to_csv",
+    "to_excel",
+    "to_json",
+    "to_pickle",
+    "to_sql",
+    "to_parquet",
+    "to_feather",
+    "to_hdf",
+    "savefig",
+}
+
+ALLOWED_IMPORTS = {
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "matplotlib.pyplot",
+    "math",
+    "statistics",
+    "re",
+}
+
+
+def build_schema_context(dataframes: dict) -> str:
+    """Build a compact live schema summary for the LLM from loaded DataFrames."""
+    sections = [
+        "LIVE DATAFRAME SCHEMA CONTEXT:",
+        "Use these exact DataFrame names and exact column names. If a needed field is not listed, say the dataset cannot directly answer the question.",
+    ]
+
+    for name, df in dataframes.items():
+        if not isinstance(df, pd.DataFrame):
+            continue
+        sections.append(f"\n{name}: {df.shape[0]:,} rows x {df.shape[1]:,} columns")
+        for col, dtype in df.dtypes.astype(str).items():
+            sections.append(f"- {col} ({dtype})")
+
+    sections.append(
+        "\nKnown limitations: the HRRP data is hospital-level / hospital-measure-level aggregate data, not patient-level claims data. "
+        "It has one 3-year measurement window, not monthly or annual time-series rows. "
+        "Avoid causal claims unless the analysis truly supports them."
+    )
+    return "\n".join(sections)
+
+
+def _literal_strings(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    if isinstance(node, (ast.List, ast.Tuple)):
+        values = []
+        for elt in node.elts:
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                values.append(elt.value)
+            else:
+                return []
+        return values
+    return []
+
+
+def validate_generated_code(code_str: str, dataframes: dict) -> tuple[bool, str]:
+    """
+    Validate LLM-generated analysis code before execution.
+    This is a guardrail, not a full security sandbox.
+    """
+    try:
+        tree = ast.parse(code_str)
+    except SyntaxError as e:
+        return False, f"Generated code has a syntax error: {e}"
+
+    schema = {
+        name: set(df.columns)
+        for name, df in dataframes.items()
+        if isinstance(df, pd.DataFrame)
+    }
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            imported_names = []
+            if isinstance(node, ast.Import):
+                imported_names = [alias.name for alias in node.names]
+            elif node.module:
+                imported_names = [node.module]
+
+            for imported in imported_names:
+                root = imported.split(".")[0]
+                if root in BLOCKED_IMPORTS or imported not in ALLOWED_IMPORTS:
+                    return False, f"Import '{imported}' is not allowed in generated analysis code."
+
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name) and func.id in BLOCKED_CALLS:
+                return False, f"Call to '{func.id}' is not allowed in generated analysis code."
+            if isinstance(func, ast.Attribute):
+                if func.attr in BLOCKED_METHODS:
+                    return False, f"Method '{func.attr}' is not allowed because generated code must not write files or external outputs."
+                if isinstance(func.value, ast.Name) and func.value.id == "st":
+                    return False, "Streamlit UI calls are not allowed inside generated analysis code; use print() for output."
+
+        if isinstance(node, ast.Attribute) and node.attr.startswith("__"):
+            return False, "Dunder attribute access is not allowed in generated analysis code."
+
+        if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+            df_name = node.value.id
+            if df_name in schema:
+                requested_cols = _literal_strings(node.slice)
+                for col in requested_cols:
+                    if col not in schema[df_name]:
+                        return False, f"Column '{col}' does not exist in {df_name}. Use the live schema exactly."
+
+    return True, "Code validation passed."
+
 # Tool definition for OpenAI
 OPENAI_TOOLS = [
     {
@@ -103,6 +244,14 @@ def execute_pandas_query(code_str: str, dataframes: dict) -> str:
     Executes a string of python code in an environment containing the provided dataframes.
     Captures stdout and returns it. If an exception occurs, returns the exception details.
     """
+    is_valid, validation_message = validate_generated_code(code_str, dataframes)
+    if not is_valid:
+        return (
+            "Generated code failed pre-execution validation and was not run.\n"
+            f"Reason: {validation_message}\n"
+            "Revise the code using only the available DataFrames, exact column names, safe imports, and print() for output."
+        )
+
     # Custom show_plot function to capture matplotlib figure and print HTML image tag
     def show_plot():
         fig = plt.gcf()
@@ -122,7 +271,6 @@ def execute_pandas_query(code_str: str, dataframes: dict) -> str:
         'np': np,
         'plt': plt,
         'show_plot': show_plot,
-        'st': st,
         **dataframes
     }
     
@@ -155,7 +303,8 @@ def run_agent_loop(client, openai_messages, dataframes, model="gpt-4o-mini"):
       - 'content': the text content, code content, or list of new messages
     """
     # System message configuration
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    schema_context = build_schema_context(dataframes)
+    messages = [{"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{schema_context}"}]
     
     # Add conversation history
     for msg in openai_messages:
